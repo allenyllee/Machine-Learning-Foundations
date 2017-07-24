@@ -205,6 +205,80 @@ int PLA(Dataset *dset, int *randIndex, double eta){
 }
 
 
+int PocketPLA(Dataset *dset){
+    Vector W = Vzero;
+    Vector Vtemp = Vzero;
+    double dtemp = 0;
+    int i = 0; 
+    int noMistakeCount = 0;
+    int updateCount = 0;
+    int temp=0;
+
+
+    srand(time(NULL));
+
+    temp = rand() % dset.size;
+
+    do{
+        /*
+        printf("==== loop %d=====\n",i);
+        printDataRecord(dset,i);
+        printf("==== loop %d=====\n",i);
+        */
+
+        dtemp = innerProduct(&W, &(dset->inputX[temp]));
+
+        //printf("inner product dtemp %lf\n", dtemp);
+
+        if (dtemp == 0) dtemp = -1;
+        dtemp = dtemp * dset->outputY[temp];
+
+        //printf("sign dtemp %lf\n",dtemp);
+
+        if(dtemp < 0){
+            /*
+            printf("==== loop %d=====\n",i);
+            printDataRecord(dset,temp);
+            printf("==== loop %d=====\n",i);
+            printf("sign dtemp %lf\n",dtemp);
+
+            printf("==== before update =====\n");
+            printVector(&Vtemp);
+            printVector(&W);
+            */
+            
+            Vtemp = vectorMultiplyConstant( &(dset->inputX[temp]), (double) dset->outputY[temp] );
+            W = vectorAdd( &W, &Vtemp );
+            /*
+            printf("==== after update =====\n");
+            printVector(&Vtemp);
+            printVector(&W);
+            
+            printf("\n");
+            */
+            
+            updateCount++;
+            noMistakeCount = 0;
+        }else{
+            noMistakeCount++;
+        }
+
+        i++;
+
+        if(i >= dset->size) {
+            i %= dset->size;
+        }
+        //printf("update count: %d\n", updateCount);
+        //printf("no mistake count: %d\n", noMistakeCount);
+        //printf("\n");
+        
+        if(updateCount == 50) break;
+    }while(noMistakeCount < dset->size);
+
+    return updateCount;
+}
+
+
 
 void normalCycle(int *indexArray, int size){
     int i=0;
