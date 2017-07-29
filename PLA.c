@@ -333,10 +333,24 @@ int main(){
     loadDataset(&dset1);
     //updates = PLA(&dset1);
 
+    printf("for normal cycle\n");
     normalCycle(randIndex, dset1.size);
     updates = PLA(&dset1, randIndex, 1);
     printf("update count is : %d\n", updates);
 
+    printf("for random cycle with eta=1\n");
+    for(i=0;i<2000;i++){
+        randomCycle(randIndex, dset1.size);
+        updates += PLA(&dset1, randIndex, 1);
+        //printf("update count is : %d\n", updates);
+    }
+    //printf("test inner product %lf\n", innerProduct(&Vtest1, &Vtest2));
+    printf("total update count is : %d\n", updates);
+    updates /= 2000;
+    printf("average update count is : %d\n", updates);
+
+
+    printf("for random cycle with eta=0.5\n");
     for(i=0;i<2000;i++){
         randomCycle(randIndex, dset1.size);
         updates += PLA(&dset1, randIndex, 0.5);
@@ -346,6 +360,7 @@ int main(){
     printf("total update count is : %d\n", updates);
     updates /= 2000;
     printf("average update count is : %d\n", updates);
+
 
     return 0;
 }
