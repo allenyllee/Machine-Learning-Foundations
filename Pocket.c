@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+
+#define DEBUG 0
 //typedef struct v Vector;
 
 typedef struct v{
@@ -211,54 +213,56 @@ int PLA(Dataset *dset, int *randIndex, double eta){
 }
 
 
-int Pocket(Dataset *dset, int *dataIndex, int stopCount, Vector *Wout){
-    Vector W = Vzero;
+int Pocket(Dataset *dset, int *dataIndex, int stopCount, Vector *Wpocket, Vector *Wpla){
+    //Vector W = Vzero;
     //Vector Wtemp = Vzero;
     int updateCount = 0;
     int tempIndex=0;
     //int i=0;
-    int currentMistakeCount=0, previousMistakeCount=0;
+    int PLAMistakeCount=0, bestMistakeCount=0;
 
     srand(time(NULL));
 
-    *Wout = Vzero;
-    previousMistakeCount = checkAllMistake(dset, Wout);
+    *Wpla = Vzero;
+    *Wpocket = Vzero;
+    bestMistakeCount = checkAllMistake(dset, Wpocket);
 
-    /*
+#if DEBUG
     printf("update count = %d\n", updateCount);
-    printf("W = \n");
-    printVector(Wout);
-    printf("with Mistake Count = %d\n", previousMistakeCount);
-    */
+    printf("Wpocket = \n");
+    printVector(Wpocket);
+    printf("with Pocket Mistake Count = %d\n", bestMistakeCount);
+#endif
 
     do{
 
         tempIndex = rand() % dset->size;
         //printf("tempIndex = %d\n", tempIndex);
 
-        if(isMistake(dset, tempIndex, &W)){
+        if(isMistake(dset, tempIndex, Wpla)){
             //printf("old W = \n");
             //printVector(&W);
             //Wtemp = W;
 
-            updateWeight(dset, tempIndex, &W);
+            updateWeight(dset, tempIndex, Wpla);
             updateCount++;
             //printf("new W = \n");
             //printVector(&W);
-            currentMistakeCount = checkAllMistake(dset, &W);
-            if(currentMistakeCount < previousMistakeCount){
+            PLAMistakeCount = checkAllMistake(dset, Wpla);
+            if(PLAMistakeCount < bestMistakeCount){
                 //printf("old W = \n");
                 //printVector(&Wtemp);
 
-                *Wout = W;
-                previousMistakeCount = currentMistakeCount;
+                *Wpocket = *Wpla;
+                bestMistakeCount = PLAMistakeCount;
                 
-                /*
+#if DEBUG
                 printf("update count = %d\n", updateCount);
-                printf("new W = \n");
-                printVector(Wout);
-                printf("with Mistake Count = %d\n", previousMistakeCount);
-                */
+                printf("new Wpocket = \n");
+                printVector(Wpocket);
+                printf("with Pocket Mistake Count = %d\n", bestMistakeCount);
+#endif
+
             }
         }
         
@@ -271,12 +275,13 @@ int Pocket(Dataset *dset, int *dataIndex, int stopCount, Vector *Wout){
 
     }while(updateCount < stopCount);
 
-    /*
-    printf("W = \n");
-    printVector(Wout);
-    printf("with Mistake Count = %d\n", previousMistakeCount);
-    */
-    return previousMistakeCount;
+#if DEBUG
+    printf("Wpocket = \n");
+    printVector(Wpocket);
+    printf("with Pocket Mistake Count = %d\n", bestMistakeCount);
+#endif
+
+    return bestMistakeCount;
 }
 
 
@@ -331,8 +336,8 @@ int main(){
     int randIndex[400]={0};
     int randIndex2[500]={0};
     int i=0;
-    Vector W = Vzero;
-    double mistakeRate = 0;
+    Vector Wpocket = Vzero, Wpla = Vzero;
+    double PocketmistakeRate = 0, PLAmistakeRate = 0;
 
     loadDataset(&dset1, "hw1_18_train.dat");
     loadDataset(&dset2, "hw1_18_test.dat");
@@ -342,17 +347,19 @@ int main(){
     //printf("debug2\n");
     for(i=0;i<2000;i++){
         //printf("i=%d\n",i);
-        Pocket(&dset1, randIndex2, 50, &W);
+        Pocket(&dset1, randIndex2, 100, &Wpocket, &Wpla);
         //printf("debug3\n");
-        mistakeRate += (double)checkAllMistake(&dset2, &W)/(double)dset2.size;
+        PocketmistakeRate += (double)checkAllMistake(&dset2, &Wpocket)/(double)dset2.size;
+        PLAmistakeRate += (double)checkAllMistake(&dset2, &Wpla)/(double)dset2.size;
         //mistakeRate += (double)Pocket(&dset1, randIndex2, 50)/(double)dset2.size;
     }
     
     printf("i=%d\n",i);
-    mistakeRate /= i;
+    PocketmistakeRate /= i;
+    PLAmistakeRate /= i;
 
-    printf("Rate of mistake = %f\n", mistakeRate);
-
+    printf("Rate of Pocket mistake = %f\n", PocketmistakeRate);
+    printf("Rate of PLA mistake = %f\n", PLAmistakeRate);
 
 
 /*
