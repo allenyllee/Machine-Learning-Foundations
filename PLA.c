@@ -217,7 +217,7 @@ int PocketPLA(Dataset *dset){
 
     srand(time(NULL));
 
-    temp = rand() % dset.size;
+    temp = rand() % dset->size;
 
     do{
         /*
