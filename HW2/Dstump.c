@@ -39,17 +39,17 @@ int rand_Flip_with_Percent(int A, double percent){
     return (double) rand()/ (double)(RAND_MAX + 1.) < percent/100 ? -A : A;
 }
 
-void sort_data(Vector *data, int datasize){
-    Vector temp1=Vzero;
+void sort_data(Vector2 **data2, int datasize, int dim){
+    Vector2 *temp1=NULL;
 
     //printf("sorting...\n");
 
     for(int i=0;i<datasize;i++){
         for(int j=i;j<datasize;j++){
-            if(data[i].x > data[j].x){
-                temp1 = data[i];
-                data[i] = data[j];
-                data[j]= temp1;
+            if(data2[i]->x[dim] > data2[j]->x[dim]){
+                temp1 = data2[i];
+                data2[i] = data2[j];
+                data2[j] = temp1;
             }
         }
     }
@@ -64,7 +64,7 @@ typedef struct _hp HypParameter;
 
 typedef void (*HypInit)(HypSet *);
 typedef int (*HypFunc)(double , HypParameter *);
-typedef double (*HypEoutFunc)(HypSet *);
+typedef double (*HypEoutFunc)(HypSet *, int dim);
 
 typedef struct _hp{
     double _theta;
@@ -76,22 +76,23 @@ typedef struct _hs{
     HypInit _init;
     int _hsize;
     int _datasize;
-    double _Ein;
+    double *_Ein;
     double _Eout;
-    int _hypIndex;
+    int *_hypIndex;
+    int _Xdim;
     Vector *_data;
-    Vector2 *_data2;
+    Vector2 **_data2;
     HypEoutFunc _hef;
     HypFunc _hf;
-    HypParameter *_hp;
+    HypParameter **_hp;
 }HypSet;
 
 int h_st(double x, HypParameter *hp){
     return hp->_s * sign(x - hp->_theta);
 }
 
-double h_Eout(HypSet *hs){
-    return 0.5 + 0.3 * (hs->_hp[hs->_hypIndex]._s) * (abs(hs->_hp[hs->_hypIndex]._theta) - 1);
+double h_Eout(HypSet *hs, int dim){
+    return 0.5 + 0.3 * (hs->_hp[dim][hs->_hypIndex[dim]]._s) * (abs(hs->_hp[dim][hs->_hypIndex[dim]]._theta) - 1);
 }
 
 void init_hypset(HypSet *hs){
@@ -100,27 +101,49 @@ void init_hypset(HypSet *hs){
     // allocate hypothesis memroy
     //
     hs->_hsize = 2*hs->_datasize;
-    hs->_hp = (HypParameter*) malloc(sizeof(HypParameter)* hs->_hsize);
-    
+    hs->_hp = (HypParameter**) malloc(sizeof(HypParameter*) * hs->_Xdim);
+    for(int i=0; i< hs->_Xdim; i++){
+        hs->_hp[i] = (HypParameter*) malloc(sizeof(HypParameter)* hs->_hsize);
+    }
+
+
+    hs->_hypIndex = (int*) malloc(sizeof(int) * hs->_Xdim+1);
+    hs->_Ein = (double*) malloc(sizeof(double) * hs->_Xdim+1);
+
     //
     // init hypothesis function
     //
     hs->_hf = h_st;
     hs->_hef = h_Eout;
 
-    //
-    // enumarate all hypothesis set
-    //
-    hs->_hp[0]._s = 1;
-    hs->_hp[0]._theta = ((-1)+(hs->_data[0].x))/2;
-    hs->_hp[1]._s = -1;
-    hs->_hp[1]._theta = ((-1)+(hs->_data[0].x))/2;
 
-    for(int i=1; i< hs->_datasize ; i++){
-        hs->_hp[2*i]._s = 1;
-        hs->_hp[2*i]._theta = (hs->_data[i-1].x + hs->_data[i].x)/2;
-        hs->_hp[2*i+1]._s = -1;
-        hs->_hp[2*i+1]._theta = (hs->_data[i-1].x + hs->_data[i].x)/2;
+
+
+    for(int j=0; j< hs->_Xdim; j++){
+
+        printf("\ndimension %d...\n", j);
+        sort_data(hs->_data2 , hs->_datasize, j);
+
+        /*
+        for(int i=0; i<hs->_datasize; i++){
+            printf("data2[%d]->x[%d] = %.4f, data2[%d]->y = %d\n",i ,0 , hs->_data2[i]->x[j] ,i ,hs->_data2[i]->y);
+        }
+        */
+
+        //
+        // enumarate all hypothesis set
+        //
+        hs->_hp[j][0]._s = 1;
+        hs->_hp[j][0]._theta = ((-1)+(hs->_data2[0]->x[j]))/2;
+        hs->_hp[j][1]._s = -1;
+        hs->_hp[j][1]._theta = ((-1)+(hs->_data2[0]->x[j]))/2;
+
+        for(int i=1; i< hs->_datasize ; i++){
+            hs->_hp[j][2*i]._s = 1;
+            hs->_hp[j][2*i]._theta = (hs->_data2[i-1]->x[j] + hs->_data2[i]->x[j])/2;
+            hs->_hp[j][2*i+1]._s = -1;
+            hs->_hp[j][2*i+1]._theta = (hs->_data2[i-1]->x[j] + hs->_data2[i]->x[j])/2;
+        }
     }
 
 }
@@ -128,25 +151,28 @@ void init_hypset(HypSet *hs){
 //
 // load data set
 //
-void printDataRecord(Vector2 *data2, int index){
+void printDataRecord(Vector2 **data2, int index){
     int i=0;
 
     for(int i=0; i< 9; i++){
-        printf("%lf ",data2[index].x[i]);
+        printf("%lf ",data2[index]->x[i]);
     }
-    printf("%d\n",data2[index].y);
+    printf("%d\n",data2[index]->y);
 
 }
 
-void fscanDataRecord(FILE *pFile, Vector2 *data2, int index){
+void fscanDataRecord(FILE *pFile, Vector2 **data2, int index){
     int i=0;
-    
+    //printf("index = %d\n", index);
     for(int i=0; i< 9; i++){
-        data2[index].x[i] = 0;
-        fscanf(pFile, "%lf ", &(data2[index].x[i]) );
+        //printf("dim = %d\n", i);
+        //printf("data2[index] = %X\n", data2[index]);
+        //printf("data2[index]->x = %X\n", data2[index]->x);
+        data2[index]->x[i] = 0;
+        fscanf(pFile, "%lf ", &(data2[index]->x[i]) );
     }
-    data2[index].y = 0;
-    fscanf(pFile, "%d\n", &(data2[index].y) );
+    data2[index]->y = 0;
+    fscanf(pFile, "%d\n", &(data2[index]->y) );
 }
 
 int loadDataset(HypSet *hs, char *filename){
@@ -157,7 +183,8 @@ int loadDataset(HypSet *hs, char *filename){
         int line_number=0;
         int i=0;
     
-    
+        printf("loading %s...\n", filename);
+
         // open data file
         pFile = fopen(filename,"r");
     
@@ -177,11 +204,19 @@ int loadDataset(HypSet *hs, char *filename){
         //dset->size = line_number;
     
         // alloc memory
-        hs->_data2 = (Vector2*) malloc(sizeof(Vector2)* hs->_datasize);
+        hs->_data2 = (Vector2**) malloc( sizeof(Vector2*) * hs->_datasize);
+        for(int i=0; i< hs->_datasize; i++){
+            hs->_data2[i] = (Vector2*) malloc(sizeof(Vector2));
+        }
         //dset->inputX = (Vector*) malloc(sizeof(Vector)* dset->size);
-        
+        //printf("test\n");
+
         for(int i=0; i < hs->_datasize; i++){
-            hs->_data2[i].x = (double*) malloc(sizeof(double) * 9);
+            //printf("test\n");
+            //printf("index = %d, %X\n", i, hs->_data2[i]);
+            hs->_data2[i]->x = (double*) malloc(sizeof(double) * hs->_Xdim);
+
+            if(hs->_data2[i]->x == NULL) printf("memory allocate error, index = %d\n", i);
         }
 
         /*
@@ -198,12 +233,14 @@ int loadDataset(HypSet *hs, char *filename){
             return 1;
         }
         */
-    
+        //printf("test\n");
         // get data records
-        for(i=0 ; i<line_number ; i++){
+        for(int i=0 ; i< hs->_datasize ; i++){
             fscanDataRecord(pFile, hs->_data2, i);
+            //printDataRecord(hs->_data2, i);
         }
-    
+        //printf("test\n");
+
         // print data records
         printf("size of data records: %d\n", hs->_datasize);
         printf("\n");
@@ -224,12 +261,12 @@ int err(int f, int g){
     return f == g ? 0:1;
 }
 
-int ErrCnt(HypSet *hs, int hypIndex){
+int ErrCnt(HypSet *hs, int hypIndex, int dim){
     int i=0;
     int err_count=0;
 
-    for(int i=0; i< DATA_SIZE; i++){
-        err_count += err(hs->_data[i].y, hs->_hf(hs->_data[i].x, &(hs->_hp[hypIndex])));
+    for(int i=0; i< hs->_datasize; i++){
+        err_count += err(hs->_data2[i]->y, hs->_hf(hs->_data2[i]->x[dim], &(hs->_hp[dim][hypIndex])));
     }
     return err_count;
 }
@@ -239,22 +276,39 @@ void E_in(HypSet *hs){
     int min_err=0, temp=0;
     int hypIndex=0;
 
-    //
-    // find min E_in
-    //
-    min_err = ErrCnt(hs, 0);
-    hypIndex = 0;
+    for(int j=0; j< hs->_Xdim; j++){
+        //
+        // find min E_in
+        //
+        min_err = ErrCnt(hs, 0, j);
+        hypIndex = 0;
 
-    for(int i=1; i < hs->_hsize; i++){
-        temp = ErrCnt(hs, i);
-        if( temp < min_err) {
-            min_err = temp;
-            hypIndex = i;
+        for(int i=1; i < hs->_hsize; i++){
+            temp = ErrCnt(hs, i, j);
+            if( temp < min_err) {
+                min_err = temp;
+                hypIndex = i;
+            }
         }
+
+        hs->_hypIndex[j] = hypIndex;
+        hs->_Ein[j] = (double) min_err/ (double) hs->_datasize;
+        //hs->_Ein[hs->_Xdim] += (double)min_err;
+        printf("dim %d min err count %d\n", j, min_err);
     }
 
-    hs->_hypIndex = hypIndex;
-    hs->_Ein = (double) min_err/ (double) hs->_datasize;
+    for(int i=0; i< hs->_datasize; i++){
+        temp = 1;
+        for(int j=0; j< hs->_Xdim; j++){
+            temp *= hs->_hf(hs->_data2[i]->x[j], &(hs->_hp[j][hs->_hypIndex[j]]));
+        }
+
+        hs->_Ein[hs->_Xdim] += err(hs->_data2[i]->y, temp);
+    }
+
+    //printf("Ein = %f\n", hs->_Ein[hs->_Xdim]);
+    hs->_Ein[hs->_Xdim] /= (double) hs->_datasize;
+    //printf("Ein = %f\n", hs->_Ein[hs->_Xdim]);
 
     //printf("HypSet Index %d with min err count %d\n", hypIndex, min_err);
     
@@ -262,15 +316,10 @@ void E_in(HypSet *hs){
     
 }
 
-void E_out(HypSet *hs){
-    hs->_Eout = hs->_hef(hs);
+void E_out(HypSet *hs, int dim){
+    hs->_Eout = hs->_hef(hs, dim);
     //printf("Eout = %.6f\n", hs->_Eout);
 }
-
-
-
-
-
 
 
 //
@@ -279,11 +328,11 @@ void E_out(HypSet *hs){
 int main(){
     int i=0;
     //int counterPos=0, counterNeg=0;
-    Vector data[DATA_SIZE];
+    //Vector data[DATA_SIZE];
     HypSet hs;
     double avg_Ein=0, avg_Eout=0;
 
-
+/*
     srand(time(NULL));
     //randMToN(-1,1);
 
@@ -336,11 +385,42 @@ int main(){
     printf("avg Ein = %.6f\n", avg_Ein);
     printf("avg Eout = %.6f\n", avg_Eout);
 
+*/
+    hs.this = &hs;
+    hs._Xdim = 9;
 
     loadDataset(&hs, "hw2_train.dat");
+    //printf("test\n");
 
+    //hs._data = data;
+    //hs._datasize = DATA_SIZE;
+    
+    hs._init = init_hypset;
+    hs._init(hs.this);
 
+    //printf("test\n");
 
+    /*
+    sort_data(hs._data2 , hs._datasize, 0);
+
+    for(int i=0; i<hs._datasize; i++){
+        printf("data2[%d]->x[%d] = %.4f, data2[%d]->y = %d\n",i ,0 , hs._data2[i]->x[0] ,i ,hs._data2[i]->y);
+    }
+    */
+
+    E_in(&hs);
+
+    for(int i=0; i< hs._Xdim+1; i++){
+        printf("hs._Ein[%d] = %f, hs->_hypIndex[%d] = %d\n", i, hs._Ein[i], i, hs._hypIndex[i]);
+    }
+
+    loadDataset(&hs, "hw2_test.dat");
+
+    E_in(&hs);
+    
+    for(int i=0; i< hs._Xdim+1; i++){
+        printf("hs._Ein[%d] = %f, hs->_hypIndex[%d] = %d\n", i, hs._Ein[i], i, hs._hypIndex[i]);
+    }
 
 
     return 0;
