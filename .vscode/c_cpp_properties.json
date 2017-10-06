@@ -1,0 +1,58 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "/usr/include",
+                "${workspaceRoot}"
+            ],
+            "intelliSenseMode": "clang-x64",
+            "browse": {
+                "path": [
+                    "/usr/include",
+                    "${workspaceRoot}"
+                ]
+            },
+            "macFrameworkPath": [
+                "/System/Library/Frameworks",
+                "/Library/Frameworks"
+            ]
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/include",
+                "${workspaceRoot}"
+            ],
+            "intelliSenseMode": "clang-x64",
+            "browse": {
+                "path": [
+                    "/usr/include",
+                    "${workspaceRoot}"
+                ]
+            }
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "C:/MinGW/x86_64-w64-mingw32/include",
+                "C:/MinGW/x86_64-w64-mingw32/include/sys",
+                "${workspaceRoot}"
+            ],
+            "intelliSenseMode": "msvc-x64",
+            "browse": {
+                "path": [
+                    "C:/MinGW/x86_64-w64-mingw32/include",
+                    "C:/MinGW/x86_64-w64-mingw32/include/sys",
+                    "${workspaceRoot}"
+                ]
+            }
+        }
+    ],
+    "clang_format": {
+        "style": "file",
+        "fallback-style": "WebKit",
+        "sort-includes": true
+    },
+    "version": 3
+}
