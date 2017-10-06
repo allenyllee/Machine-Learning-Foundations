@@ -37,7 +37,8 @@
             "includePath": [
                 "C:/MinGW/x86_64-w64-mingw32/include",
                 "C:/MinGW/x86_64-w64-mingw32/include/sys",
-                "${workspaceRoot}"
+                "${workspaceRoot}",
+                "C:\\TDM-GCC-64\\x86_64-w64-mingw32\\include"
             ],
             "intelliSenseMode": "msvc-x64",
             "browse": {
